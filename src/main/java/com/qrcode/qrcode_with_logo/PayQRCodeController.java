@@ -7,6 +7,7 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -20,11 +21,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
 @Controller
 public class PayQRCodeController {
@@ -49,29 +52,30 @@ public class PayQRCodeController {
     }
 
     private String writeQR(CreateAccountRequest request) throws WriterException, IOException {
-        String qcodePath = "src/main/resources/static/" + request.getName() + "-QRCode.png";
-        String logo = "src/main/resources/static/" + request.getName() + "logo.png";
-        QRCodeWriter qrCodeWriter = new QRCodeWriter();
-        BitMatrix bitMatrix = qrCodeWriter.encode(request.getName() + "\n" + request.getEmail() + "\n"
-                + request.getMobile() + "\n" + request.getPassword(), BarcodeFormat.QR_CODE, 350, 350);
-        Path path = FileSystems.getDefault().getPath(qcodePath);
-        //Path path1= FileSystems.getDefault().getPath(logo);
-       /* MatrixToImageConfig imageConfig = new MatrixToImageConfig(MatrixToImageConfig.BLACK, MatrixToImageConfig.WHITE);
-        BufferedImage qrImage = MatrixToImageWriter.toBufferedImage(bitMatrix, imageConfig);
-        BufferedImage logoImage = ImageIO.read( new File(String.valueOf(path1)));
-        int finalImageHeight = qrImage.getHeight() - logoImage.getHeight();
-        int finalImageWidth = qrImage.getWidth() - logoImage.getWidth();
-        //Merging both images
-        BufferedImage finalImage = new BufferedImage(qrImage.getHeight(), qrImage.getWidth(), BufferedImage.TYPE_INT_ARGB);
-        Graphics2D graphics = (Graphics2D) finalImage.getGraphics();
-        graphics.drawImage(qrImage, 0, 0, null);
-        graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
-        graphics.drawImage(logoImage, (int) Math.round(finalImageWidth / 2), (int) Math.round(finalImageHeight / 2), null);
-       MatrixToImageWriter.writeToPath(bitMatrix, "PNG", path);
-        return "/static/" + request.getName() + "-QRCode.png";
-    }*/
+        Map hints = new HashMap();
+        hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H);
 
- return null;
+        String qcodePath = "src/main/resources/static/images/" + request.getName() + "-QRCode.png";
+        String logo = "src/main/resources/static/images/" + request.getName() + "logo.png";
+        QRCodeWriter qrCodeWriter = new QRCodeWriter();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        BitMatrix bitMatrix = qrCodeWriter.encode(request.getName() + "\n" + request.getEmail() + "\n"
+                + request.getMobile() + "\n" + request.getPassword(), BarcodeFormat.QR_CODE, 350, 350, hints);
+        MatrixToImageConfig config = new MatrixToImageConfig(MatrixToImageConfig.BLACK, MatrixToImageConfig.WHITE);
+        BufferedImage qrImage = MatrixToImageWriter.toBufferedImage(bitMatrix, config);
+        BufferedImage logoImage = ImageIO.read(new File(logo));
+        int deltaHeight = qrImage.getHeight() - logoImage.getHeight();
+        int deltaWidth = qrImage.getWidth() - logoImage.getWidth();
+        //combined
+        BufferedImage combined = new BufferedImage(qrImage.getHeight(), qrImage.getWidth(), BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = (Graphics2D) combined.getGraphics();
+
+        g.drawImage(qrImage, 0, 0, null);
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+        g.drawImage(logoImage, (int) Math.round(deltaWidth / 2), (int) Math.round(deltaHeight / 2), null);
+        Path path = FileSystems.getDefault().getPath(String.valueOf(combined));
+        MatrixToImageWriter.writeToPath(bitMatrix, "PNG", path);
+        return "/static/images/" + request.getName() + "-combined.png";
     }
     private String readQR(String qrImage) throws Exception {
         final Resource fileResource = resourceLoader.getResource("classpath:static/" + qrImage);
