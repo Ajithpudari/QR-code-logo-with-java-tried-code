@@ -55,15 +55,19 @@ public class PayQRCodeController {
         Map hints = new HashMap();
         hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H);
 
-        String qcodePath = "src/main/resources/static/images/" + request.getName() + "-QRCode.png";
-        String logo = "src/main/resources/static/images/" + request.getName() + "logo.png";
+       // String qcodePath = "src/main/resources/static/images/" + request.getName() + "-QRCode.png";
+       // String logo = "src/main/resources/static/images/" + request.getName() + "logo.png";
         QRCodeWriter qrCodeWriter = new QRCodeWriter();
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
         BitMatrix bitMatrix = qrCodeWriter.encode(request.getName() + "\n" + request.getEmail() + "\n"
                 + request.getMobile() + "\n" + request.getPassword(), BarcodeFormat.QR_CODE, 350, 350, hints);
         MatrixToImageConfig config = new MatrixToImageConfig(MatrixToImageConfig.BLACK, MatrixToImageConfig.WHITE);
+
         BufferedImage qrImage = MatrixToImageWriter.toBufferedImage(bitMatrix, config);
-        BufferedImage logoImage = ImageIO.read(new File(logo));
+        File file;
+        file = new File("C:/Users/Ajith/Downloads/qr-code-generator-with-logo-using-java-spring-boot-master/logo.png");
+        BufferedImage logoImage = ImageIO.read(file);
         int deltaHeight = qrImage.getHeight() - logoImage.getHeight();
         int deltaWidth = qrImage.getWidth() - logoImage.getWidth();
         //combined
@@ -73,8 +77,9 @@ public class PayQRCodeController {
         g.drawImage(qrImage, 0, 0, null);
         g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
         g.drawImage(logoImage, (int) Math.round(deltaWidth / 2), (int) Math.round(deltaHeight / 2), null);
-        Path path = FileSystems.getDefault().getPath(String.valueOf(combined));
-        MatrixToImageWriter.writeToPath(bitMatrix, "PNG", path);
+        Path path = FileSystems.getDefault().getPath("C:/Users/Ajith/Downloads/qr-code-generator-with-logo-using-java-spring-boot-master/Newfolder");
+        //MatrixToImageWriter.writeToPath(baos, "PNG", path);
+       ImageIO.write(combined, "png", baos);
         return "/static/images/" + request.getName() + "-combined.png";
     }
     private String readQR(String qrImage) throws Exception {
